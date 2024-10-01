@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>색깔 맞추기 게임</title>
+    <style>
+         * {
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background-color: black;
+            color: white;
+            font-family: Pretendard, sans-serif;
+            overflow: hidden;
+        }
+
+        .left-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+             margin-left: -200px;
+        }
+
+        .right-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-left: -200px;
+        }
+
+        h1 {
+            font-size: 4em;
+            margin-bottom: 50px;
+        }
+
+        .description {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .color-box {
+            width: 300px;
+            height: 300px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+
+        .color-box p {
+            font-size: 5em;
+            font-weight: bold;
+            color: black;
+            user-select: none;
+            margin: 0;
+        }
+
+        .choices {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .choice {
+            flex: 1;
+            height: 50px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: transform 0.1s;
+            text-indent: -9999px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .choice:active {
+            transform: scale(0.95);
+        }
+
+        #timer {
+            margin-top: 20px;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .score, .high-score {
+            margin: 5px 0;
+            font-size: 1.2em;
+        }
+
+        #startButton {
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+
+        @media (max-width: 600px) {
+            .color-box {
+                width: 150px;
+                height: 150px;
+            }
+
+            .choice {
+                height: 40px;
+            }
+
+            .score, .high-score, #timer {
+                font-size: 1em;
+            }
+
+            .color-box p {
+                font-size: 1.5em;
+            }
+
+            #startButton {
+                padding: 8px 16px;
+                font-size: 0.9em;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .description {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="left-container">
+        <h1>색깔 맞추기 게임</h1>
+        <div class="description" style="margin-bottom: 50px;">
+            색깔을 무시하고 <strong>글자</strong>와 동일한 색상을 선택해주세요.<br>
+            제한시간은 10초입니다.
+        </div>
+        <div class="high-score">최고 기록: <span id="highScore">0</span></div>
+        <button id="startButton">게임 시작</button>
+    </div>
+
+    <div class="right-container">
+        <div id="timer">남은 시간: <span id="timeLeft">10</span>초</div>
+        <div class="score">점수: <span id="score">0</span></div>
+        <div class="color-box">
+            <p id="colorText">빨강</p>
+        </div>
+        <div class="choices">
+            <button class="choice" id="choice1"></button>
+            <button class="choice" id="choice2"></button>
+            <button class="choice" id="choice3"></button>
+            <button class="choice" id="choice4"></button>
+        </div>
+    </div>
+
+    <!-- 오디오 요소 추가 -->
+    <audio id="gameOverSound" src="sounds/over.mp3"></audio>
+    <audio id="correctSound" src="correct.mp3"></audio>
+    <audio id="wrongSound" src="wrong.mp3"></audio>
+
+    <script>
+        const colorBox = document.getElementById('colorText');
+        const choices = document.querySelectorAll('.choice');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+        const timeLeftDisplay = document.getElementById('timeLeft');
+        const startButton = document.getElementById('startButton');
+
+
+        const gameOverSound = document.getElementById('gameOverSound');
+        const correctSound = document.getElementById('correctSound');
+        const wrongSound = document.getElementById('wrongSound');
+
+
+        const colors = ['빨강', '초록', '파랑', '노랑'];
+        let correctColor = '';
+        let score = 0;
+        let timeLeft = 10;
+        let timerInterval;
+        let gameActive = false;
+
+
+        let highScore = localStorage.getItem('highScore') || 0;
+        highScoreDisplay.textContent = highScore;
+
+
+        function startGame() {
+            score = 0;
+            timeLeft = 10;
+            scoreDisplay.textContent = score;
+            timeLeftDisplay.textContent = timeLeft;
+            startButton.disabled = true;
+            gameActive = true;
+            newRound();
+            resetTimer();
+        }
+
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeLeftDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+ 
+        function newRound() {
+            const randomColorText = colors[Math.floor(Math.random() * colors.length)];
+            let randomColorActual;
+            do {
+                randomColorActual = colors[Math.floor(Math.random() * colors.length)];
+            } while (randomColorActual === randomColorText);
+
+            colorBox.textContent = randomColorText;
+            colorBox.style.backgroundColor = getColorInEnglish(randomColorActual);
+
+            const shuffledColors = shuffleArray(colors.slice());
+
+
+            choices.forEach((choice, index) => {
+                choice.style.backgroundColor = getColorInEnglish(shuffledColors[index]);
+                choice.textContent = shuffledColors[index];
+            });
+
+            correctColor = randomColorText;
+        }
+
+        function getColorInEnglish(color) {
+            switch(color) {
+                case '빨강': return 'red';
+                case '초록': return 'green';
+                case '파랑': return 'blue';
+                case '노랑': return 'yellow';
+
+                default: return 'black';
+            }
+        }
+
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function checkChoice(e) {
+            if (!gameActive) return;
+
+            const selectedColor = e.target.style.backgroundColor;
+            const correctColorEnglish = getColorInEnglish(correctColor);
+
+
+            if (selectedColor === correctColorEnglish) {
+
+                correctSound.currentTime = 0;
+                correctSound.play();
+                score++;
+                scoreDisplay.textContent = score;
+                newRound();
+            } else {
+                wrongSound.currentTime = 0;
+                wrongSound.play();
+                endGame();
+            }
+        }
+
+       
+
+        function endGame() {
+            clearInterval(timerInterval);
+            gameActive = false;
+            gameOverSound.currentTime = 0;
+            gameOverSound.play();
+            setTimeout(() => {
+                alert('게임 종료! 점수: ' + score);
+                startButton.disabled = false;
+            }, 500);
+
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                highScoreDisplay.textContent = highScore;
+            }
+        }
+
+        choices.forEach(choice => {
+            choice.addEventListener('click', checkChoice);
+        });
+        startButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
